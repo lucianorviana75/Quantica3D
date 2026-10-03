@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Quantica3D - Simulador de Vasos e Reações</title>
+    <!-- Three.js e OrbitControls para visualização 3D -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; height: 100vh; background-color: #0f172a; color: #f8fafc; overflow: hidden; }
+        
+        /* Layout Split-Screen */
+        .panel { padding: 20px; overflow-y: auto; background: #1e293b; display: flex; flex-direction: column; gap: 15px; }
+        #left-panel { width: 320px; border-right: 1px solid #334155; }
+        #right-panel { width: 340px; border-left: 1px solid #334155; }
+        #canvas-container { flex: 1; position: relative; background: #020617; }
+        
+        h2 { font-size: 1.2rem; color: #38bdf8; border-bottom: 2px solid #38bdf8; padding-bottom: 5px; margin-bottom: 10px; }
+        .control-group { display: flex; flex-direction: column; gap: 5px; }
+        label { font-size: 0.85rem; color: #94a3b8; }
+        select, input { padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; outline: none; }
+        input[type="range"] { accent-color: #38bdf8; cursor: pointer; }
+        
+        .metric-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+        .metric-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; margin-top: 4px; }
+        
+        /* Indicadores de Status */
+        .status-box { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; transition: all 0.3s ease; }
+        .status-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+        .status-alert { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+        .status-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+    </style>
+</head>
+<body>
+
+    <!-- Painel Lateral Esquerdo: Controles -->
+    <div id="left-panel" class="panel">
+        <h2>Quantica3D - Controles</h2>
+        
+        <div class="control-group">
+            <label for="geometria">Geometria do Objeto</label>
+            <select id="geometria" onchange="atualizarSimulacao()">
+                <option value="cubo">Cubo</option>
+                <option value="esfera">Esfera</option>
+                <option value="cilindro">Cilindro</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="material">Material do Recipiente</label>
+            <select id="material" onchange="atualizarSimulacao()"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="elemento">Substância Química</label>
+            <select id="elemento" onchange="atualizarSimulacao()"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="dimensao">Dimensão (Raio/Lado): <span id="val-dimensao">0.5</span> m</label>
+            <input type="range" id="dimensao" min="0.1" max="2.0" step="0.1" value="0.5" oninput="atualizarSimulacao()">
+        </div>
+
+        <div class="control-group">
+            <label for="espessura">Espessura da Parede: <span id="val-espessura">5</span> mm</label>
+            <input type="range" id="espessura" min="0.001" max="0.02" step="0.001" value="0.005" oninput="atualizarSimulacao()">
+        </div>
+
+        <div class="control-group">
+            <label for="massa">Massa Inserida: <span id="val-massa">100</span> g</label>
+            <input type="range" id="massa" min="10" max="1000" step="10" value="100" oninput="atualizarSimulacao()">
+        </div>
+
+        <div class="control-group">
+            <label for="temperatura">Temperatura: <span id="val-temperatura">25</span> °C</label>
+            <input type="range" id="temperatura" min="-50" max="300" step="5" value="25" oninput="atualizarSimulacao()">
+        </div>
+    </div>
+
+    <!-- Canvas Central 3D -->
+    <div id="canvas-container"></div>
+
+    <!-- Painel Lateral Direito: Telemetria e Resultados -->
+    <div id="right-panel" class="panel">
+        <h2>Telemetria em Tempo Real</h2>
+        
+        <div class="metric-card">
+            <label>Volume Calculado</label>
+            <div class="metric-value" id="res-volume">0.00 m³</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Quantidade de Matéria</label>
+            <div class="metric-value" id="res-mols">0.00 mols</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Pressão Interna</label>
+            <div class="metric-value" id="res-pressao">0.00 atm</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Tensão Mecânica na Parede</label>
+            <div class="metric-value" id="res-tensao">0.00 MPa</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Nível de Estresse do Material</label>
+            <div class="metric-value" id="res-estresse">0%</div>
+        </div>
+
+        <div id="status-box" class="status-box status-ok">
+            SISTEMA ESTÁVEL
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CONFIGURAÇÃO DA CENA THREE.JS ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020617);
+
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(0, 1.5, 3);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Iluminação
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+        const pointLight = new THREE.PointLight(0x38bdf8, 1, 10);
+        pointLight.position.set(2, 3, 2);
+        scene.add(pointLight);
+
+        let objeto3D;
+        let sistemaParticulas = null;
+        let estadoAtualEfeito = 'estavel';
+
+        const materialMesh = new THREE.MeshPhongMaterial({
+            color: 0x22c55e,
+            transparent: true,
+            opacity: 0.65,
+            wireframe: false
+        });
+
+        function recriarGeometria(tipo, dimensao) {
+            if (objeto3D) scene.remove(objeto3D);
+            let geom;
+            if (tipo === 'esfera') geom = new THREE.SphereGeometry(dimensao, 32, 32);
+            else if (tipo === 'cilindro') geom = new THREE.CylinderGeometry(dimensao, dimensao, dimensao * 2, 32);
+            else geom = new THREE.BoxGeometry(dimensao, dimensao, dimensao);
+
+            objeto3D = new THREE.Mesh(geom, materialMesh);
+            scene.add(objeto3D);
+        }
+
+        // --- 2. GERADOR DE EFEITOS E PARTÍCULAS (REAÇÕES) ---
+        function dispararEfeitoParticulas(tipo) {
+            if (sistemaParticulas) {
+                scene.remove(sistemaParticulas);
+                sistemaParticulas = null;
+            }
+
+            if (tipo === 'estavel') return;
+
+            const count = tipo === 'explosao' ? 600 : 250;
+            const geom = new THREE.BufferGeometry();
+            const pos = new Float32Array(count * 3);
+            const vels = [];
+
+            let corHex = 0xff4500; // Laranja/Fogo
+            if (tipo === 'congelado') corHex = 0x93c5fd; // Azul Gelo
+            if (tipo === 'corrosao') corHex = 0x84cc16;  // Verde Ácido
+
+            for (let i = 0; i < count; i++) {
+                pos[i * 3] = (Math.random() - 0.5) * 0.3;
+                pos[i * 3 + 1] = (Math.random() - 0.5) * 0.3;
+                pos[i * 3 + 2] = (Math.random() - 0.5) * 0.3;
+
+                const mult = tipo === 'explosao' ? 0.08 : 0.02;
+                vels.push({
+                    x: (Math.random() - 0.5) * mult,
+                    y: (Math.random() - 0.5) * mult + (tipo === 'corrosao' ? 0.01 : 0),
+                    z: (Math.random() - 0.5) * mult
+                });
+            }
+
+            geom.setAttribute('position', new THREE.BufferAttribute(pos, 3));
+
+            const mat = new THREE.PointsMaterial({
+                color: corHex,
+                size: tipo === 'explosao' ? 0.05 : 0.03,
+                transparent: true,
+                opacity: 0.8
+            });
+
+            sistemaParticulas = new THREE.Points(geom, mat);
+            sistemaParticulas.userData = { velocidades: vels, tipo: tipo };
+            scene.add(sistemaParticulas);
+        }
+
+        // Loop de Renderização & Animações
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (objeto3D && estadoAtualEfeito !== 'explosao') {
+                objeto3D.rotation.y += estadoAtualEfeito === 'congelado' ? 0.001 : 0.005;
+            }
+
+            // Animação das partículas ativas
+            if (sistemaParticulas) {
+                const pos = sistemaParticulas.geometry.attributes.position.array;
+                const vels = sistemaParticulas.userData.velocidades;
+
+                for (let i = 0; i < vels.length; i++) {
+                    pos[i * 3] += vels[i].x;
+                    pos[i * 3 + 1] += vels[i].y;
+                    pos[i * 3 + 2] += vels[i].z;
+                }
+                sistemaParticulas.geometry.attributes.position.needsUpdate = true;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // --- 3. INTEGRAÇÃO COM O SERVIDOR FLASK ---
+        async function carregarOpcoes() {
+            const res = await fetch('/api/elementos');
+            const data = await res.json();
+            
+            const selEl = document.getElementById('elemento');
+            for (let k in data.elementos) {
+                selEl.innerHTML += `<option value="${k}">${data.elementos[k].nome} (${k})</option>`;
+            }
+
+            const selMat = document.getElementById('material');
+            for (let k in data.materiais) {
+                selMat.innerHTML += `<option value="${k}">${data.materiais[k].nome}</option>`;
+            }
+
+            atualizarSimulacao();
+        }
+
+        async function atualizarSimulacao() {
+            const dim = document.getElementById('dimensao').value;
+            const esp = document.getElementById('espessura').value;
+            const mas = document.getElementById('massa').value;
+            const temp = document.getElementById('temperatura').value;
+
+            document.getElementById('val-dimensao').innerText = dim;
+            document.getElementById('val-espessura').innerText = (esp * 1000).toFixed(0);
+            document.getElementById('val-massa').innerText = mas;
+            document.getElementById('val-temperatura').innerText = temp;
+
+            const geom = document.getElementById('geometria').value;
+            recriarGeometria(geom, parseFloat(dim));
+
+            const payload = {
+                geometria: geom,
+                dimensao: dim,
+                espessura: esp,
+                material: document.getElementById('material').value,
+                elemento: document.getElementById('elemento').value,
+                massa: mas,
+                temperatura: temp
+            };
+
+            const res = await fetch('/api/calcular', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            const r = data.resultados;
+
+            // Atualizar métricas
+            document.getElementById('res-volume').innerText = `${r.volume_m3} m³`;
+            document.getElementById('res-mols').innerText = `${r.mols} mols`;
+            document.getElementById('res-pressao').innerText = `${r.pressao_atm} atm`;
+            document.getElementById('res-tensao').innerText = `${r.tensao_mpa} MPa`;
+            document.getElementById('res-estresse').innerText = `${r.estresse_percentual}%`;
+
+            // Atualizar Estados e Efeitos Visuais
+            const statusBox = document.getElementById('status-box');
+            statusBox.innerText = r.mensagem_status;
+            
+            estadoAtualEfeito = r.estado_efeito;
+
+            if (r.estado_efeito === 'explosao') {
+                statusBox.className = 'status-box status-danger';
+                objeto3D.visible = false; // O vaso estilhaça/desaparece
+                dispararEfeitoParticulas('explosao');
+            } else if (r.estado_efeito === 'congelado') {
+                statusBox.className = 'status-box status-alert';
+                objeto3D.visible = true;
+                materialMesh.color.setHex(0x38bdf8); // Azul glacial
+                materialMesh.opacity = 0.85;
+                dispararEfeitoParticulas('congelado');
+            } else if (r.estado_efeito === 'corrosao') {
+                statusBox.className = 'status-box status-danger';
+                objeto3D.visible = true;
+                objeto3D.scale.set(0.85, 0.85, 0.85); // Recipiente encolhe/derrete
+                materialMesh.color.setHex(0x65a30d); // Verde corrosivo
+                dispararEfeitoParticulas('corrosao');
+            } else {
+                objeto3D.visible = true;
+                objeto3D.scale.set(1, 1, 1);
+                materialMesh.opacity = 0.65;
+                dispararEfeitoParticulas('estavel');
+
+                if (r.estresse_percentual > 70) {
+                    statusBox.className = 'status-box status-alert';
+                    materialMesh.color.setHex(0xeab308); // Amarelo
+                } else {
+                    statusBox.className = 'status-box status-ok';
+                    materialMesh.color.setHex(0x22c55e); // Verde
+                }
+            }
+        }
+
+        carregarOpcoes();
+    </script>
+</body>
+</html>

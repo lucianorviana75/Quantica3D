@@ -1,0 +1,36 @@
+Ambiente Virtual
+
+venv/
+env/
+ENV/
+.venv/
+
+Cache do Python
+
+pycache/
+*.py[cod]
+*$py.class
+
+Configurações de IDEs e Editores
+
+.vscode/
+.idea/
+*.swp
+*.swo
+
+Banco de dados e logs do Flask / Aplicação
+
+*.db
+*.sqlite3
+instance/
+*.log
+
+Variáveis de ambiente e segredos
+
+.env
+.flaskenv
+
+Arquivos do sistema operacional
+
+.DS_Store
+Thumbs.db

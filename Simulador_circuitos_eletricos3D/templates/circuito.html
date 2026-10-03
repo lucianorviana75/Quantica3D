@@ -1,0 +1,435 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>QuanticaCircuits 3D - Simulador Elétrico Avançado</title>
+    <!-- Three.js e OrbitControls -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
+        body { display: flex; height: 100vh; background-color: #0f172a; color: #f8fafc; overflow: hidden; }
+        
+        .panel { padding: 20px; overflow-y: auto; background: #1e293b; display: flex; flex-direction: column; gap: 12px; }
+        #left-panel { width: 380px; border-right: 1px solid #334155; }
+        #right-panel { width: 340px; border-left: 1px solid #334155; }
+        #canvas-container { flex: 1; position: relative; background: #020617; }
+        
+        h2 { font-size: 1.1rem; color: #f59e0b; border-bottom: 2px solid #f59e0b; padding-bottom: 5px; margin-bottom: 8px; }
+        .control-group { display: flex; flex-direction: column; gap: 4px; }
+        label { font-size: 0.82rem; color: #94a3b8; }
+        select, input { padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; outline: none; font-size: 0.9rem; }
+        input[type="range"] { accent-color: #f59e0b; cursor: pointer; }
+        
+        .metric-card { background: #0f172a; padding: 10px; border-radius: 8px; border: 1px solid #334155; }
+        .metric-value { font-size: 1.25rem; font-weight: bold; color: #f59e0b; margin-top: 2px; }
+        
+        .status-box { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; font-size: 0.85rem; }
+        .status-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+        .status-alert { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+        .status-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+    </style>
+</head>
+<body>
+
+    <!-- Painel Lateral Esquerdo: Controles Elétricos -->
+    <div id="left-panel" class="panel">
+        <h2>QuanticaCircuits 3D</h2>
+        
+        <div class="control-group">
+            <label for="tipo_equipamento">Tipo de Equipamento / Carga</label>
+            <select id="tipo_equipamento" onchange="alterarEquipamento(); atualizarCircuito();">
+                <option value="lampada">Resistência / Lâmpada (FP = 1.0)</option>
+                <option value="chuveiro" selected>Chuveiro Elétrico (Alta Potência / Resistivo)</option>
+                <option value="motor_mono">Motor Monofásico</option>
+                <option value="motor_bi">Motor Bifásico</option>
+                <option value="motor_tri">Motor Industrial Trifásico</option>
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label for="sistema">Sistema de Alimentação</label>
+            <select id="sistema" onchange="atualizarCircuito();">
+                <option value="monofasico">Monofásico (F + N)</option>
+                <option value="bifasico">Bifásico (F + F)</option>
+                <option value="trifasico">Trifásico (3F)</option>
+            </select>
+        </div>
+
+        <div class="control-group" id="group-fp">
+            <label for="fator_potencia">Fator de Potência (cos φ): <span id="val-fp">1.00</span></label>
+            <input type="range" id="fator_potencia" min="0.50" max="1.00" step="0.01" value="1.00" oninput="atualizarCircuito()">
+        </div>
+
+        <div class="control-group" id="group-rendimento">
+            <label for="rendimento">Rendimento do Equipamento (η): <span id="val-rendimento">1.00</span></label>
+            <input type="range" id="rendimento" min="0.50" max="1.00" step="0.01" value="1.00" oninput="atualizarCircuito()">
+        </div>
+
+        <div class="control-group">
+            <label for="tensao">Tensão da Fonte (V): <span id="val-tensao">220</span> V</label>
+            <input type="range" id="tensao" min="12" max="1000" step="1" value="220" oninput="atualizarCircuito()">
+        </div>
+
+        <div class="control-group">
+            <label for="potencia_w">Potência Nominal: <span id="val-potencia">5.5</span> kW</label>
+            <input type="range" id="potencia_w" min="10" max="500000" step="50" value="5500" oninput="atualizarCircuito()">
+        </div>
+
+        <div class="control-group">
+            <label for="material_fio">Material do Condutor (Cabo)</label>
+            <select id="material_fio" onchange="atualizarCircuito()"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="seccao_fio">Bitola do Cabo (NBR 5410)</label>
+            <select id="seccao_fio" onchange="atualizarCircuito()"></select>
+        </div>
+
+        <div class="control-group">
+            <label for="comprimento_fio">Comprimento do Circuito: <span id="val-comprimento">15</span> m</label>
+            <input type="range" id="comprimento_fio" min="1" max="500" step="1" value="15" oninput="atualizarCircuito()">
+        </div>
+    </div>
+
+    <!-- Canvas Central 3D -->
+    <div id="canvas-container"></div>
+
+    <!-- Painel Lateral Direito: Telemetria Elétrica -->
+    <div id="right-panel" class="panel">
+        <h2>Telemetria & Diagnóstico</h2>
+        
+        <div class="metric-card">
+            <label>Potência Consumida</label>
+            <div class="metric-value" id="res-potencia">5500 W</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Corrente Elétrica / Amperagem (I)</label>
+            <div class="metric-value" id="res-corrente">0.00 A</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Resistência da Carga (Chuveiro / Equip.)</label>
+            <div class="metric-value" id="res-resistencia-carga">0.00 Ω</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Resistência dos Cabos (Condutores)</label>
+            <div class="metric-value" id="res-resistencia-fio">0.0000 Ω</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Resistência Total do Circuito</label>
+            <div class="metric-value" id="res-resistencia-total">0.00 Ω</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Tensão na Carga (Ponta)</label>
+            <div class="metric-value" id="res-tensao-carga">0.0 V</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Queda de Tensão (ΔV / NBR 5410)</label>
+            <div class="metric-value" id="res-queda-tensao">0.00 V (0.0%)</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Perda por Efeito Joule nos Cabos</label>
+            <div class="metric-value" id="res-perda-fio">0.0 W</div>
+        </div>
+
+        <div class="metric-card">
+            <label>Temperatura Estimada do Cabo</label>
+            <div class="metric-value" id="res-temp-fio">25.0 °C</div>
+        </div>
+
+        <div id="status-box" class="status-box status-ok">
+            CIRCUITO OPERACIONAL
+        </div>
+    </div>
+
+    <script>
+        // --- 1. CENA THREE.JS ---
+        const container = document.getElementById('canvas-container');
+        const scene = new THREE.Scene();
+        scene.background = new THREE.Color(0x020617);
+
+        // Câmera posicionada em um ângulo inclinado para melhor visualização 3D
+        const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 100);
+        camera.position.set(0, 3.5, 6);
+
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        const controls = new THREE.OrbitControls(camera, renderer.domElement);
+        controls.enableDamping = true;
+
+        // Iluminação melhorada
+        scene.add(new THREE.AmbientLight(0xffffff, 0.7));
+        
+        const dirLight = new THREE.DirectionalLight(0xffffff, 0.8);
+        dirLight.position.set(5, 10, 7);
+        scene.add(dirLight);
+
+        const pLight = new THREE.PointLight(0xf59e0b, 1.5, 10);
+        pLight.position.set(1.4, 0.8, 0);
+        scene.add(pLight);
+
+        // --- 2. OBJETOS 3D ---
+        const fioGroup = new THREE.Group();
+        scene.add(fioGroup);
+
+        // Fonte Elétrica (Quadro de Luz)
+        const fonteMesh = new THREE.Mesh(
+            new THREE.BoxGeometry(0.6, 0.9, 0.4),
+            new THREE.MeshPhongMaterial({ color: 0x334155, specular: 0x475569 })
+        );
+        fonteMesh.position.set(-1.8, 0.45, 0);
+        scene.add(fonteMesh);
+
+        const cargaGroup = new THREE.Group();
+        cargaGroup.position.set(1.8, 0.3, 0);
+        scene.add(cargaGroup);
+
+        // Mesh Lâmpada
+        const lampadaMesh = new THREE.Mesh(
+            new THREE.SphereGeometry(0.35, 16, 16),
+            new THREE.MeshPhongMaterial({ color: 0xfacc15, transparent: true, opacity: 0.9 })
+        );
+
+        // Mesh Chuveiro
+        const chuveiroGroup = new THREE.Group();
+        const corpoChuveiro = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.3, 0.5, 16),
+            new THREE.MeshPhongMaterial({ color: 0xf8fafc, specular: 0xcbd5e1 })
+        );
+        const canoChuveiro = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.06, 0.06, 0.7, 8),
+            new THREE.MeshPhongMaterial({ color: 0x64748b })
+        );
+        canoChuveiro.rotation.z = Math.PI / 2;
+        canoChuveiro.position.set(-0.35, 0.2, 0);
+        chuveiroGroup.add(corpoChuveiro);
+        chuveiroGroup.add(canoChuveiro);
+
+        // Mesh Motor
+        const motorGroup = new THREE.Group();
+        const motorBody = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.4, 0.4, 0.8, 16),
+            new THREE.MeshPhongMaterial({ color: 0x0284c7, specular: 0x38bdf8 })
+        );
+        motorBody.rotation.z = Math.PI / 2;
+        
+        const eixoMesh = new THREE.Mesh(
+            new THREE.CylinderGeometry(0.08, 0.08, 1.0, 8),
+            new THREE.MeshPhongMaterial({ color: 0x94a3b8 })
+        );
+        eixoMesh.rotation.z = Math.PI / 2;
+        motorGroup.add(motorBody);
+        motorGroup.add(eixoMesh);
+
+        cargaGroup.add(chuveiroGroup);
+
+        // Fiação Curva 3D Completa ligando a Fonte até a Carga
+        const caminhoFio = [
+            new THREE.Vector3(-1.8, 0.45, 0),
+            new THREE.Vector3(-1.8, 0.45, -0.8),
+            new THREE.Vector3(1.8, 0.45, -0.8),
+            new THREE.Vector3(1.8, 0.45, 0),
+            new THREE.Vector3(1.8, 0.45, 0.8),
+            new THREE.Vector3(-1.8, 0.45, 0.8),
+            new THREE.Vector3(-1.8, 0.45, 0)
+        ];
+
+        const fioCurve = new THREE.CatmullRomCurve3(caminhoFio);
+        const fioGeom = new THREE.TubeGeometry(fioCurve, 80, 0.05, 8, false);
+        const fioMat = new THREE.MeshPhongMaterial({ color: 0xb87333, shininess: 80 });
+        const fioMesh = new THREE.Mesh(fioGeom, fioMat);
+        fioGroup.add(fioMesh);
+
+        // Partículas de Elétrons em Movimento
+        const numEletrons = 120;
+        const eletronGeom = new THREE.BufferGeometry();
+        const eletronPos = new Float32Array(numEletrons * 3);
+        const eletronProgress = new Float32Array(numEletrons);
+
+        for (let i = 0; i < numEletrons; i++) {
+            eletronProgress[i] = i / numEletrons;
+            const pt = fioCurve.getPoint(eletronProgress[i]);
+            eletronPos[i * 3] = pt.x;
+            eletronPos[i * 3 + 1] = pt.y;
+            eletronPos[i * 3 + 2] = pt.z;
+        }
+
+        eletronGeom.setAttribute('position', new THREE.BufferAttribute(eletronPos, 3));
+        const eletronMat = new THREE.PointsMaterial({ color: 0x38bdf8, size: 0.08, transparent: true, opacity: 0.95 });
+        const sistemaEletrons = new THREE.Points(eletronGeom, eletronMat);
+        scene.add(sistemaEletrons);
+
+        let velocidadeEletronsAtual = 0;
+        let estadoCircuitoAtual = 'normal';
+
+        function alterarEquipamento() {
+            const tipo = document.getElementById('tipo_equipamento').value;
+            const sistemaSelect = document.getElementById('sistema');
+            
+            cargaGroup.clear();
+
+            if (tipo === 'lampada') {
+                cargaGroup.add(lampadaMesh);
+                document.getElementById('fator_potencia').value = 1.0;
+                document.getElementById('rendimento').value = 1.0;
+            } else if (tipo === 'chuveiro') {
+                cargaGroup.add(chuveiroGroup);
+                document.getElementById('fator_potencia').value = 1.0;
+                document.getElementById('rendimento').value = 1.0;
+                sistemaSelect.value = 'monofasico';
+            } else {
+                cargaGroup.add(motorGroup);
+                document.getElementById('fator_potencia').value = 0.85;
+                document.getElementById('rendimento').value = 0.85;
+
+                if (tipo === 'motor_mono') sistemaSelect.value = 'monofasico';
+                if (tipo === 'motor_bi') sistemaSelect.value = 'bifasico';
+                if (tipo === 'motor_tri') sistemaSelect.value = 'trifasico';
+            }
+        }
+
+        function animate() {
+            requestAnimationFrame(animate);
+
+            if (velocidadeEletronsAtual > 0) {
+                const pos = sistemaEletrons.geometry.attributes.position.array;
+                for (let i = 0; i < numEletrons; i++) {
+                    eletronProgress[i] += velocidadeEletronsAtual * 0.002;
+                    if (eletronProgress[i] > 1) eletronProgress[i] -= 1;
+
+                    const pt = fioCurve.getPoint(eletronProgress[i]);
+                    pos[i * 3] = pt.x;
+                    pos[i * 3 + 1] = pt.y;
+                    pos[i * 3 + 2] = pt.z;
+                }
+                sistemaEletrons.geometry.attributes.position.needsUpdate = true;
+                sistemaEletrons.visible = true;
+
+                if (document.getElementById('tipo_equipamento').value.includes('motor')) {
+                    eixoMesh.rotation.x += velocidadeEletronsAtual * 0.2;
+                }
+            } else {
+                sistemaEletrons.visible = false;
+            }
+
+            controls.update();
+            renderer.render(scene, camera);
+        }
+        animate();
+
+        window.addEventListener('resize', () => {
+            camera.aspect = container.clientWidth / container.clientHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(container.clientWidth, container.clientHeight);
+        });
+
+        // --- 3. CARREGAMENTO E ATUALIZAÇÃO DOS SELECTS ---
+        async function carregarOpcoes() {
+            try {
+                const res = await fetch('/api/dados_iniciais');
+                const data = await res.json();
+                
+                const selMat = document.getElementById('material_fio');
+                selMat.innerHTML = '';
+                for (let k in data.materiais) {
+                    selMat.innerHTML += `<option value="${k}">${data.materiais[k].nome}</option>`;
+                }
+
+                const selBitola = document.getElementById('seccao_fio');
+                selBitola.innerHTML = '';
+                data.bitolas.forEach(b => {
+                    selBitola.innerHTML += `<option value="${b}">${b} mm²</option>`;
+                });
+
+                selBitola.value = "4.0";
+                atualizarCircuito();
+            } catch (err) {
+                console.error("Erro ao carregar dados iniciais:", err);
+            }
+        }
+
+        async function atualizarCircuito() {
+            const tensao = document.getElementById('tensao').value;
+            const potencia = document.getElementById('potencia_w').value;
+            const fp = document.getElementById('fator_potencia').value;
+            const rend = document.getElementById('rendimento').value;
+            const sistema = document.getElementById('sistema').value;
+            const matFio = document.getElementById('material_fio').value;
+            const secFio = document.getElementById('seccao_fio').value;
+            const compFio = document.getElementById('comprimento_fio').value;
+
+            document.getElementById('val-tensao').innerText = tensao;
+            document.getElementById('val-potencia').innerText = potencia >= 1000 ? (potencia / 1000).toFixed(1) + ' k' : potencia;
+            document.getElementById('val-fp').innerText = fp;
+            document.getElementById('val-rendimento').innerText = rend;
+            document.getElementById('val-comprimento').innerText = compFio;
+
+            const payload = {
+                tensao: tensao,
+                potencia_w: potencia,
+                fator_potencia: fp,
+                rendimento: rend,
+                sistema: sistema,
+                material_fio: matFio,
+                seccao_fio: secFio,
+                comprimento_fio: compFio
+            };
+
+            const res = await fetch('/api/calcular_circuito', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            const r = data.resultados;
+
+            // Atualização dos campos no HTML
+            document.getElementById('res-potencia').innerText = `${r.potencia_w} W`;
+            document.getElementById('res-corrente').innerText = `${r.corrente_a} A`;
+            document.getElementById('res-resistencia-carga').innerText = `${r.resistencia_carga_ohm} Ω`;
+            document.getElementById('res-resistencia-fio').innerText = `${r.resistencia_fio_ohm} Ω`;
+            document.getElementById('res-resistencia-total').innerText = `${r.resistencia_total_ohm} Ω`;
+            document.getElementById('res-tensao-carga').innerText = `${r.tensao_carga_v} V`;
+            document.getElementById('res-queda-tensao').innerText = `${r.queda_tensao_v} V (${r.percentual_queda_tensao}%)`;
+            document.getElementById('res-perda-fio').innerText = `${r.potencia_perda_fio_w} W`;
+            document.getElementById('res-temp-fio').innerText = `${r.temp_fio_c} °C`;
+
+            velocidadeEletronsAtual = r.velocidade_eletrons;
+            estadoCircuitoAtual = r.estado_circuito;
+
+            const statusBox = document.getElementById('status-box');
+            statusBox.innerText = r.mensagem;
+
+            // Mantém os cabos visíveis mesmo em situação de superaquecimento
+            fioMesh.visible = true;
+
+            if (r.estado_circuito === 'fusao_fio') {
+                statusBox.className = 'status-box status-danger';
+                fioMat.color.setHex(0xef4444); // Vermelho derretimento
+                pLight.intensity = 0.2;
+            } else if (r.estado_circuito === 'queda_tensao_alta' || r.estado_circuito === 'sobrecarga') {
+                statusBox.className = 'status-box status-alert';
+                fioMat.color.setHex(0xf97316); // Laranja alerta
+                pLight.intensity = 1.0;
+            } else {
+                statusBox.className = 'status-box status-ok';
+                fioMat.color.setHex(matFio === 'aluminio' ? 0xcbd5e1 : 0xb87333); // Cor normal do cabo
+                pLight.intensity = 2.0;
+            }
+        }
+
+        window.onload = carregarOpcoes;
+    </script>
+</body>
+</html>

@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Laboratório Químico 3D</title>
+    <style>
+        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
+        body { background-color: #0d131f; color: #fff; margin: 0; padding: 15px; height: 100vh; overflow: hidden; }
+        
+        .main-container { display: flex; gap: 15px; height: calc(100vh - 30px); }
+
+        /* PAINEL DA ESQUERDA */
+        .left-panel { width: 340px; background: #131b2e; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
+        
+        .control-group { margin-bottom: 12px; }
+        .control-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+        .control-group input[type="range"] { width: 100%; cursor: pointer; }
+        .control-group select, .control-group input[type="number"] { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; }
+
+        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+        .btn-add { background: #2563eb; color: white; }
+        .btn-undo { background: #eab308; color: #0f172a; }
+        .btn-clear { background: #dc2626; color: white; }
+        .btn:hover { filter: brightness(1.1); }
+
+        .card-resultado { background: #090e17; border-radius: 8px; padding: 12px; margin-top: auto; font-size: 13px; border: 1px solid #1e293b; }
+        .badge-perigo { background: #dc2626; color: white; font-weight: bold; padding: 6px; border-radius: 4px; margin: 10px 0; text-align: center; }
+        
+        /* ÁREA CENTRAL - CENÁRIO 3D */
+        .center-canvas { flex: 1; background: #05080e; border-radius: 10px; position: relative; overflow: hidden; }
+        #canvas3d { width: 100%; height: 100%; }
+
+        /* PAINEL DA DIREITA - TABELA PERIÓDICA COMPACTA */
+        .right-panel { width: 420px; background: #131b2e; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; }
+        .search-box { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; margin-bottom: 12px; }
+        
+        .tabela-grid { display: grid; grid-template-columns: repeat(18, 1fr); gap: 2px; overflow-x: auto; padding-bottom: 5px; }
+        
+        /* CARD COM TOOLTIP AO PASSAR O MOUSE */
+        .elem-card { position: relative; background: #0284c7; border: none; color: white; padding: 4px 2px; border-radius: 3px; cursor: pointer; text-align: center; font-size: 9px; min-width: 20px; }
+        .elem-card:hover { background: #38bdf8; }
+        .elem-card strong { display: block; font-size: 11px; }
+
+        .explicacao-text { white-space: pre-line; line-height: 1.4; color: #cbd5e1; font-size: 12px; }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+</head>
+<body>
+
+<div class="main-container">
+    <!-- PAINEL ESQUERDO -->
+    <div class="left-panel">
+        <div class="control-group">
+            <label>Temperatura: <span id="tempDisplay">25</span> °C</label>
+            <input type="range" id="tempSlider" min="-273" max="3000" value="25">
+        </div>
+
+        <div class="control-group">
+            <label>Elemento Selecionado:</label>
+            <select id="substanciaSelect">
+                {% for id, elem in elementos.items() %}
+                    <option value="{{ id }}">{{ elem.numero }}. {{ elem.nome }} ({{ elem.simbolo }})</option>
+                {% endfor %}
+            </select>
+        </div>
+
+        <div class="control-group">
+            <label>Quantidade (g/mL):</label>
+            <input type="number" id="volumeInput" value="30">
+        </div>
+
+        <button class="btn btn-add" onclick="enviarAcao('adicionar')">+ Adicionar ao Béquer</button>
+        <button class="btn btn-undo" onclick="enviarAcao('desfazer')">↰ Desfazer Último</button>
+        <button class="btn btn-clear" onclick="enviarAcao('limpar')">🗑️ Esvaziar Béquer</button>
+
+        <div class="card-resultado">
+            <div id="infoMassa"><strong>Massa/Vol Total:</strong> 0 mL</div>
+            <div id="infoTemp"><strong>Temperatura:</strong> 25 °C</div>
+            
+            <div id="perigoBox" style="display: none;" class="badge-perigo"></div>
+            
+            <hr style="border-color: #1e293b; margin: 10px 0;">
+            <div id="composicaoBox" style="font-size: 11px; color: #94a3b8; margin-bottom: 8px;"></div>
+            
+            <div id="explicacaoBox" class="explicacao-text">Selecione elementos da tabela periódica.</div>
+        </div>
+    </div>
+
+    <!-- CENÁRIO 3D -->
+    <div class="center-canvas">
+        <div id="canvas3d"></div>
+    </div>
+
+    <!-- TABELA PERIÓDICA DIREITA -->
+    <div class="right-panel">
+        <h3 style="margin-top:0; font-size: 15px;">Tabela Periódica Interativa</h3>
+        <input type="text" class="search-box" id="searchElem" placeholder="Buscar elemento..." onkeyup="filtrarTabela()">
+        
+        <div class="tabela-grid" id="gridTabela">
+            {% for id, elem in elementos.items() %}
+                <button class="elem-card" 
+                        data-nome="{{ elem.nome }}" 
+                        title="Nº {{ elem.numero }} - {{ elem.nome }} ({{ elem.simbolo }})"
+                        onclick="selecionarElemento('{{ id }}')">
+                    <span>{{ elem.numero }}</span>
+                    <strong>{{ elem.simbolo }}</strong>
+                </button>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+<script>
+    let timerDebounce;
+
+    function selecionarElemento(id) {
+        document.getElementById('substanciaSelect').value = id;
+    }
+
+    function filtrarTabela() {
+        let input = document.getElementById('searchElem').value.toLowerCase();
+        let cards = document.querySelectorAll('.elem-card');
+        cards.forEach(card => {
+            let nome = card.getAttribute('data-nome').toLowerCase();
+            card.style.display = nome.includes(input) ? "block" : "none";
+        });
+    }
+
+    document.getElementById('tempSlider').addEventListener('input', function(e) {
+        document.getElementById('tempDisplay').innerText = e.target.value;
+        clearTimeout(timerDebounce);
+        timerDebounce = setTimeout(() => {
+            enviarAcao('calcular');
+        }, 120);
+    });
+
+    function enviarAcao(acao) {
+        const substancia = document.getElementById('substanciaSelect').value;
+        const volume = document.getElementById('volumeInput').value;
+        const temperatura = document.getElementById('tempSlider').value;
+
+        fetch('/calcular', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ acao, substancia, volume, temperatura })
+        })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById('infoMassa').innerHTML = `<strong>Massa/Vol Total:</strong> ${data.volume} mL`;
+            document.getElementById('infoTemp').innerHTML = `<strong>Temperatura:</strong> ${data.temperatura} °C`;
+            document.getElementById('explicacaoBox').innerText = data.explicacao;
+
+            const composicaoBox = document.getElementById('composicaoBox');
+            if(data.itens && data.itens.length > 0) {
+                composicaoBox.innerHTML = "<strong>Composição:</strong><br>" + data.itens.join("<br>");
+            } else {
+                composicaoBox.innerHTML = "";
+            }
+
+            const perigoBox = document.getElementById('perigoBox');
+            if (data.perigo && data.perigo !== "NENHUM") {
+                perigoBox.style.display = "block";
+                perigoBox.style.backgroundColor = data.cor_perigo;
+                perigoBox.innerText = `⚠️ PERIGO: ${data.perigo}`;
+            } else {
+                perigoBox.style.display = "none";
+            }
+
+            atualizarCena3D(data);
+        });
+    }
+
+    // THREE.JS CONFIGURADO PARA O CONTAINER CENTRAL
+    const container = document.getElementById('canvas3d');
+    const scene = new THREE.Scene();
+    const camera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 1000);
+    const renderer = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+    
+    renderer.setSize(container.clientWidth, container.clientHeight);
+    container.appendChild(renderer.domElement);
+
+    const light = new THREE.DirectionalLight(0xffffff, 1.2);
+    light.position.set(5, 10, 7);
+    scene.add(light);
+    scene.add(new THREE.AmbientLight(0x555555));
+
+    // Béquer/Fluido
+    const geometry = new THREE.CylinderGeometry(2, 2, 1.2, 32);
+    const material = new THREE.MeshPhongMaterial({ color: 0x3b82f6, transparent: true, opacity: 0.85 });
+    const bequerMesh = new THREE.Mesh(geometry, material);
+    scene.add(bequerMesh);
+
+    // Partículas de Gás
+    const particleGeo = new THREE.BufferGeometry();
+    const particleCount = 80;
+    const posArray = new Float32Array(particleCount * 3);
+    for(let i=0; i<particleCount*3; i++) {
+        posArray[i] = (Math.random() - 0.5) * 3;
+    }
+    particleGeo.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+    const particleMat = new THREE.PointsMaterial({ size: 0.06, color: 0xffffff });
+    const particleSystem = new THREE.Points(particleGeo, particleMat);
+    scene.add(particleSystem);
+    particleSystem.visible = false;
+
+    camera.position.set(0, 3, 7);
+    camera.lookAt(0, 0, 0);
+
+    function atualizarCena3D(data) {
+        if (data.estado === 'solido') {
+            bequerMesh.material.opacity = 0.95;
+            bequerMesh.material.color.setHex(0x93c5fd);
+            particleSystem.visible = false;
+        } else if (data.estado === 'gasoso' || data.gerar_gas) {
+            bequerMesh.material.opacity = 0.35;
+            particleSystem.visible = true;
+        } else {
+            bequerMesh.material.opacity = 0.85;
+            bequerMesh.material.color.setHex(0x3b82f6);
+            particleSystem.visible = false;
+        }
+    }
+
+    function animate() {
+        requestAnimationFrame(animate);
+        if (particleSystem.visible) {
+            particleSystem.rotation.y += 0.008;
+        }
+        renderer.render(scene, camera);
+    }
+    
+    window.addEventListener('resize', () => {
+        camera.aspect = container.clientWidth / container.clientHeight;
+        camera.updateProjectionMatrix();
+        renderer.setSize(container.clientWidth, container.clientHeight);
+    });
+
+    animate();
+</script>
+
+</body>
+</html>
