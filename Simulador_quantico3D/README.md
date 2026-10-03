@@ -1,4 +1,7 @@
 # 🧪 Quantica3D — Simulação Físico-Química
+🚀 **Acesse o Simulador Quântico 3D online:**
+[https://quantica3d.onrender.com](https://quantica3d.onrender.com)
+
 
 O **Quantica3D** é uma aplicação web construída com **Flask** que simula o comportamento físico e químico de gases ideais contidos em vasos de pressão de diferentes materiais e geometrias. 
 
@@ -150,3 +153,5 @@ No VS Code, para garantir que cola sem formatação de estilos ou perdas de queb
 - **Linux/Windows:** `Ctrl + Shift + V`
 - **Mac:** `Cmd + Shift + V`
 ```
+🚀 **Acesse o Simulador Quântico 3D online:**
+[https://quantica3d.onrender.com](https://quantica3d.onrender.com)
