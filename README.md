@@ -57,5 +57,7 @@ Dependendo de como o seu arquivo `app.py` foi construído, a escolha do ecossist
 | **Game Engine (Avançado)** | **Godot Engine** com scripts Python ou C# | Iluminação realista, física precisa e interatividade 3D avançada. |
 
 ---
+🚀 **Acesse o Simulador Quântico 3D online:**
+[https://quantica3d.onrender.com](https://quantica3d.onrender.com)
 
 
