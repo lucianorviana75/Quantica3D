@@ -1,5 +1,14 @@
 # Quantica3D
-Esse projeto tem um valor educacional e científico gigantesco. Integrar Química, Circuitos Elétricos e Física Quântica em ambientes 3D transforma o aprendizado abstrato em algo tangível e intuitivo.
+
+🚀 **Acesse os Simuladores 3D online:**
+
+* ⚛️ **Simulador Quântico 3D:**
+  [https://quantica3d.onrender.com](https://quantica3d.onrender.com)
+
+* ⚡ **Simulador de Circuitos Elétricos 3D:**
+  [https://circuitos-eletricos-3d.onrender.com](https://circuitos-eletricos-3d.onrender.com)
+  
+Esses projetos tem um valor educacional e científico gigantesco. Integrar Química, Circuitos Elétricos e Física Quântica em ambientes 3D transforma o aprendizado abstrato em algo tangível e intuitivo.
 
 Para evoluir a aplicação de um script simples para um produto completo, modular e acessível para qualquer pessoa, estruturei um plano prático com sugestões de melhoria e código.
 
