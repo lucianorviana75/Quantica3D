@@ -108,6 +108,41 @@
 </style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
+    <script>
+    // Função para corrigir o layout móvel ao carregar e ao redimensionar
+    function adjustMobileLayout() {
+        if (window.innerWidth <= 900) { // Se for telemóvel
+            // 1. Calcula a altura total disponível (descontando o padding do body)
+            var availableHeight = window.innerHeight - 20; // 10px padding * 2
+            
+            // 2. Define uma altura fixa para o canvas (ex: 40% da altura)
+            var canvasContainer = document.querySelector('.center-canvas');
+            canvasContainer.style.height = (availableHeight * 0.4) + 'px';
+            
+            // 3. Permite que os painéis de controle e a tabela rolem
+            var leftPanel = document.querySelector('.left-panel');
+            var rightPanel = document.querySelector('.right-panel');
+            leftPanel.style.height = (availableHeight * 0.4) + 'px'; // 40% para controles
+            rightPanel.style.height = (availableHeight * 0.2) + 'px'; // 20% para a tabela
+
+            // 4. Garante que os painéis têm scroll
+            leftPanel.style.overflowY = 'auto';
+            rightPanel.style.overflowY = 'auto';
+        } else {
+            // Se for desktop, remove os estilos móveis
+            var elementsToReset = ['.center-canvas', '.left-panel', '.right-panel'];
+            elementsToReset.forEach(selector => {
+                var el = document.querySelector(selector);
+                if (el) el.style.height = ''; // Reseta a altura fixa
+            });
+        }
+    }
+
+    // Executa ao carregar a página
+    window.addEventListener('load', adjustMobileLayout);
+    // Executa ao redimensionar a janela (ex: rodar o telemóvel)
+    window.addEventListener('resize', adjustMobileLayout);
+</script>
 <body>
 
 <div class="main-container">
