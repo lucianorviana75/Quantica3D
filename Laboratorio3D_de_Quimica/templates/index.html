@@ -4,46 +4,108 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Laboratório Químico 3D</title>
-    <style>
-        * { box-sizing: border-box; font-family: system-ui, -apple-system, sans-serif; }
-        body { background-color: #0d131f; color: #fff; margin: 0; padding: 15px; height: 100vh; overflow: hidden; }
-        
-        .main-container { display: flex; gap: 15px; height: calc(100vh - 30px); }
+   <style>
+    * { 
+        box-sizing: border-box; 
+        font-family: system-ui, -apple-system, sans-serif; 
+        margin: 0;
+        padding: 0;
+    }
+    
+    body { 
+        background-color: #0d131f; 
+        color: #fff; 
+        padding: 15px; 
+        height: 100dvh; /* dvh evita que a barra do celular corte a interface */
+        width: 100vw;
+        overflow: hidden; 
+    }
+    
+    .main-container { 
+        display: flex; 
+        gap: 15px; 
+        height: calc(100dvh - 30px); 
+    }
 
-        /* PAINEL DA ESQUERDA */
-        .left-panel { width: 340px; background: #131b2e; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
-        
-        .control-group { margin-bottom: 12px; }
-        .control-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
-        .control-group input[type="range"] { width: 100%; cursor: pointer; }
-        .control-group select, .control-group input[type="number"] { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; }
+    /* PAINEL DA ESQUERDA */
+    .left-panel { 
+        width: 340px; 
+        background: #131b2e; 
+        border-radius: 10px; 
+        padding: 15px; 
+        display: flex; 
+        flex-direction: column; 
+        overflow-y: auto; 
+    }
+    
+    .control-group { margin-bottom: 12px; }
+    .control-group label { display: block; margin-bottom: 5px; font-weight: 600; font-size: 14px; }
+    .control-group input[type="range"] { width: 100%; cursor: pointer; accent-color: #38bdf8; }
+    .control-group select, .control-group input[type="number"] { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; }
 
-        .btn { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; }
-        .btn-add { background: #2563eb; color: white; }
-        .btn-undo { background: #eab308; color: #0f172a; }
-        .btn-clear { background: #dc2626; color: white; }
-        .btn:hover { filter: brightness(1.1); }
+    .btn { width: 100%; padding: 10px; margin-bottom: 8px; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; font-size: 13px; display: flex; align-items: center; justify-content: center; gap: 6px; transition: background 0.2s; }
+    .btn-add { background: #2563eb; color: white; }
+    .btn-undo { background: #eab308; color: #0f172a; }
+    .btn-clear { background: #dc2626; color: white; }
+    .btn:hover { filter: brightness(1.1); }
 
-        .card-resultado { background: #090e17; border-radius: 8px; padding: 12px; margin-top: auto; font-size: 13px; border: 1px solid #1e293b; }
-        .badge-perigo { background: #dc2626; color: white; font-weight: bold; padding: 6px; border-radius: 4px; margin: 10px 0; text-align: center; }
-        
-        /* ÁREA CENTRAL - CENÁRIO 3D */
-        .center-canvas { flex: 1; background: #05080e; border-radius: 10px; position: relative; overflow: hidden; }
-        #canvas3d { width: 100%; height: 100%; }
+    .card-resultado { background: #090e17; border-radius: 8px; padding: 12px; margin-top: auto; font-size: 13px; border: 1px solid #1e293b; }
+    .badge-perigo { background: #dc2626; color: white; font-weight: bold; padding: 6px; border-radius: 4px; margin: 10px 0; text-align: center; }
+    
+    /* ÁREA CENTRAL - CENÁRIO 3D */
+    .center-canvas { flex: 1; background: #05080e; border-radius: 10px; position: relative; overflow: hidden; min-height: 250px; }
+    #canvas3d { width: 100%; height: 100%; }
 
-        /* PAINEL DA DIREITA - TABELA PERIÓDICA COMPACTA */
-        .right-panel { width: 420px; background: #131b2e; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; }
-        .search-box { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; margin-bottom: 12px; }
-        
-        .tabela-grid { display: grid; grid-template-columns: repeat(18, 1fr); gap: 2px; overflow-x: auto; padding-bottom: 5px; }
-        
-        /* CARD COM TOOLTIP AO PASSAR O MOUSE */
-        .elem-card { position: relative; background: #0284c7; border: none; color: white; padding: 4px 2px; border-radius: 3px; cursor: pointer; text-align: center; font-size: 9px; min-width: 20px; }
-        .elem-card:hover { background: #38bdf8; }
-        .elem-card strong { display: block; font-size: 11px; }
+    /* PAINEL DA DIREITA - TABELA PERIÓDICA COMPACTA */
+    .right-panel { width: 420px; background: #131b2e; border-radius: 10px; padding: 15px; display: flex; flex-direction: column; overflow-y: auto; }
+    .search-box { width: 100%; padding: 8px; background: #1e293b; border: 1px solid #334155; color: white; border-radius: 6px; margin-bottom: 12px; }
+    
+    .tabela-grid { display: grid; grid-template-columns: repeat(18, 1fr); gap: 2px; overflow-x: auto; padding-bottom: 5px; }
+    
+    /* CARD COM TOOLTIP AO PASSAR O MOUSE */
+    .elem-card { position: relative; background: #0284c7; border: none; color: white; padding: 4px 2px; border-radius: 3px; cursor: pointer; text-align: center; font-size: 9px; min-width: 20px; }
+    .elem-card:hover { background: #38bdf8; }
+    .elem-card strong { display: block; font-size: 11px; }
 
-        .explicacao-text { white-space: pre-line; line-height: 1.4; color: #cbd5e1; font-size: 12px; }
-    </style>
+    .explicacao-text { white-space: pre-line; line-height: 1.4; color: #cbd5e1; font-size: 12px; }
+
+    /* --- REGRAS DE RESPONSIVIDADE PARA DISPOSITIVOS MÓVEIS --- */
+    @media (max-width: 900px) {
+        body {
+            overflow-y: auto;
+            padding: 10px;
+        }
+
+        .main-container {
+            flex-direction: column;
+            height: auto;
+            min-height: calc(100dvh - 20px);
+            gap: 10px;
+        }
+
+        .center-canvas {
+            width: 100%;
+            height: 45vh; /* Visualização 3D em destaque no topo */
+            order: 1;
+        }
+
+        .left-panel {
+            width: 100%;
+            max-height: 50vh;
+            order: 2; /* Controles do experimento abaixo do 3D */
+        }
+
+        .right-panel {
+            width: 100%;
+            max-height: 50vh;
+            order: 3; /* Tabela Periódica no final */
+        }
+
+        .tabela-grid {
+            padding-bottom: 10px; /* Garante scroll horizontal suave para a tabela no celular */
+        }
+    }
+</style>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
 </head>
 <body>
