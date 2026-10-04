@@ -2,6 +2,9 @@
 
 🚀 **Acesse os Simuladores 3D online:**
 
+* 🧪 **Laboratório de Química 3D:** 
+  [https://laboratorio-quimica-3d.onrender.com](https://laboratorio-quimica-3d.onrender.com)
+
 * ⚛️ **Simulador Quântico 3D:**
   [https://quantica3d.onrender.com](https://quantica3d.onrender.com)
 
