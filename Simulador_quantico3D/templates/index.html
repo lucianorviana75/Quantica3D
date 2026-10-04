@@ -2,36 +2,86 @@
 <html lang="pt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Quantica3D - Simulador de Vasos e Reações</title>
     <!-- Three.js e OrbitControls para visualização 3D -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/controls/OrbitControls.js"></script>
     <style>
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { display: flex; height: 100vh; background-color: #0f172a; color: #f8fafc; overflow: hidden; }
-        
-        /* Layout Split-Screen */
-        .panel { padding: 20px; overflow-y: auto; background: #1e293b; display: flex; flex-direction: column; gap: 15px; }
-        #left-panel { width: 320px; border-right: 1px solid #334155; }
-        #right-panel { width: 340px; border-left: 1px solid #334155; }
-        #canvas-container { flex: 1; position: relative; background: #020617; }
-        
-        h2 { font-size: 1.2rem; color: #38bdf8; border-bottom: 2px solid #38bdf8; padding-bottom: 5px; margin-bottom: 10px; }
-        .control-group { display: flex; flex-direction: column; gap: 5px; }
-        label { font-size: 0.85rem; color: #94a3b8; }
-        select, input { padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; outline: none; }
-        input[type="range"] { accent-color: #38bdf8; cursor: pointer; }
-        
-        .metric-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
-        .metric-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; margin-top: 4px; }
-        
-        /* Indicadores de Status */
-        .status-box { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; transition: all 0.3s ease; }
-        .status-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
-        .status-alert { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
-        .status-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
-    </style>
+    * { 
+        box-sizing: border-box; 
+        margin: 0; 
+        padding: 0; 
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; 
+    }
+    
+    body { 
+        display: flex; 
+        height: 100dvh; /* dvh evita que a barra do celular corte o fundo da tela */
+        width: 100vw;
+        background-color: #0f172a; 
+        color: #f8fafc; 
+        overflow: hidden; 
+    }
+    
+    /* Layout Split-Screen para Desktop */
+    .panel { 
+        padding: 20px; 
+        overflow-y: auto; 
+        background: #1e293b; 
+        display: flex; 
+        flex-direction: column; 
+        gap: 15px; 
+    }
+    #left-panel { width: 320px; border-right: 1px solid #334155; }
+    #right-panel { width: 340px; border-left: 1px solid #334155; }
+    #canvas-container { flex: 1; position: relative; background: #020617; min-height: 250px; }
+    
+    h2 { font-size: 1.2rem; color: #38bdf8; border-bottom: 2px solid #38bdf8; padding-bottom: 5px; margin-bottom: 10px; }
+    .control-group { display: flex; flex-direction: column; gap: 5px; }
+    label { font-size: 0.85rem; color: #94a3b8; }
+    select, input { padding: 8px; border-radius: 6px; border: 1px solid #475569; background: #0f172a; color: #f8fafc; outline: none; }
+    input[type="range"] { accent-color: #38bdf8; cursor: pointer; }
+    
+    .metric-card { background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid #334155; }
+    .metric-value { font-size: 1.4rem; font-weight: bold; color: #38bdf8; margin-top: 4px; }
+    
+    /* Indicadores de Status */
+    .status-box { padding: 12px; border-radius: 8px; text-align: center; font-weight: bold; margin-top: 10px; transition: all 0.3s ease; }
+    .status-ok { background: rgba(34, 197, 94, 0.2); color: #4ade80; border: 1px solid #22c55e; }
+    .status-alert { background: rgba(234, 179, 8, 0.2); color: #facc15; border: 1px solid #eab308; }
+    .status-danger { background: rgba(239, 68, 68, 0.2); color: #f87171; border: 1px solid #ef4444; }
+
+    /* --- REGRAS DE RESPONSIVIDADE PARA TELEMÓVEIS / ECRÃS PEQUENOS --- */
+    @media (max-width: 768px) {
+        body {
+            flex-direction: column; /* Empilha os elementos verticalmente no celular */
+            overflow-y: auto; /* Permite rolar a página inteira se necessário */
+        }
+
+        #left-panel, #right-panel {
+            width: 100%;
+            border: none;
+            max-height: 45vh; /* Limita a altura dos painéis para não cobrir tudo */
+        }
+
+        #left-panel {
+            border-bottom: 1px solid #334155;
+            order: 2; /* Coloca os controles abaixo da visualização 3D */
+        }
+
+        #canvas-container {
+            width: 100%;
+            height: 40vh; /* O simulador 3D ocupa 40% da altura da tela */
+            order: 1; /* O visualizador 3D fica no topo */
+        }
+
+        #right-panel {
+            border-top: 1px solid #334155;
+            order: 3; /* Os resultados/status ficam no final */
+        }
+    }
+</style>
 </head>
 <body>
 
