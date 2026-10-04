@@ -1,6 +1,10 @@
 ### Por que Python + Web 3D?
 
 O Python é excelente para processar **fórmulas físico-químicas, estequiometria, equilíbrio químico, termodinâmica e cálculo de pH**.
+
+* 🧪 **Laboratório de Química 3D:** 
+  [https://laboratorio-quimica-3d.onrender.com](https://laboratorio-quimica-3d.onrender.com)
+  
 Para renderizar em **3D interativo** no navegador, usamos **JavaScript + Three.js** conectado ao servidor Python.
 
 ## 🏗️ Estrutura do Projeto no VS Code
