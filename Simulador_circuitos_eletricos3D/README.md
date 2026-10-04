@@ -1,5 +1,9 @@
 # ⚡ QuanticaCircuits 3D - Simulador de Circuitos Elétricos
 
+* ⚡ **Simulador de Circuitos Elétricos 3D:**
+  [https://circuitos-eletricos-3d.onrender.com](https://circuitos-eletricos-3d.onrender.com)
+
+
 O **QuanticaCircuits 3D** é uma aplicação web desenvolvida em Python e Flask para cálculo, dimensionamento e verificação de circuitos elétricos residenciais, prediais e industriais, alinhada com as normas da **NBR 5410**.
 
 A aplicação permite simular o comportamento de condutores em circuitos monofásicos, bifásicos e trifásicos, calculando perdas por efeito Joule, aquecimento do condutor, queda de tensão e emitindo diagnósticos automáticos de segurança.
